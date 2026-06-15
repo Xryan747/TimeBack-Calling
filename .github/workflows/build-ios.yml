@@ -51,13 +51,30 @@ jobs:
           APP=$(find ../DerivedData -name "App.app" -path "*/Release-iphoneos/*" | head -1)
           echo "App: $APP"
           if [ -z "$APP" ]; then echo "FAIL: no .app"; exit 1; fi
-          mkdir Payload
-          cp -r "$APP" Payload/
-          zip -qr App.ipa Payload
-          ls -lh App.ipa
 
-      - name: Upload
+          # Check .app structure
+          echo "=== App bundle ==="
+          ls "$APP" | head -20
+          echo "=== Info.plist ==="
+          ls "$APP/Info.plist" 2>/dev/null && echo "Info.plist OK" || echo "NO Info.plist!"
+
+          # Create IPA using ditto (macOS native, preserves .app correctly)
+          mkdir Payload
+          cp -R "$APP" Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload App.ipa
+          rm -rf Payload
+
+          # Verify IPA
+          echo "=== IPA ==="
+          ls -lh App.ipa
+          echo "=== IPA contents ==="
+          unzip -l App.ipa | head -15
+
+          # Move to repo root for easier download
+          mv App.ipa ../../
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: DigitalHuman
-          path: ios/App/App.ipa
+          path: App.ipa
