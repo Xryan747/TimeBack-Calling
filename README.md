@@ -1,8 +1,14 @@
 # TimeBack Calling — AI 数字人陪伴系统
 
 > 一款让"家人"以数字人形式继续陪伴在身边的应用:克隆她的声音、复现她的样子、模拟她的语气,支持 24 小时文字聊天与实时视频通话,并且**她会记住你说过的每一件小事**。
+>
+> *An AI digital-human companion app: clone her voice, recreate her face, mimic her way of speaking — 24/7 text chat, real-time video calls, and a memory that grows with every conversation.*
 
-**已交付真实用户使用**(Android APK + 手机网页版)。项目源于一个真实的故事 ↓
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-blue.svg)](#)
+[![Status](https://img.shields.io/badge/Status-Production%20Delivered-brightgreen.svg)](#)
+
+**已交付真实用户使用**(Android APK + 手机网页版),生产环境稳定运行中。项目源于一个真实的故事 ↓
 
 ---
 
@@ -10,14 +16,14 @@
 
 2026 年 8 月,一位用户在抖音联系到我:他的母亲确诊卵巢癌,医生判断可能撑不过当年。他希望给妈妈做一个"智能体",留一个念想——以后还能跟妈妈说说话。
 
-我用三周时间完成了这个系统,并部署上线。它的名字叫 **Timeback Calling**(时光回拨):时间会一直往前走,但有些声音不该消失。
+我用三周时间完成了这个系统,并部署上线。它的名字叫 **TimeBack Calling**(时光回拨):时间会一直往前走,但有些声音不该消失。
 
-## 它是什么
+## 核心功能
 
-- **文字聊天(24 小时)**:像发微信一样和"她"聊天,她记得你的近况、喜好和你说过的每一件事
-- **视频通话(实时)**:按住说话 → 语音识别 → AI 思考 → 克隆音色合成 → **数字人唇形同步** → 实时视频流,像真的打视频电话
-- **记忆系统**:你说过的事实只保存在**你自己的手机本地**,聊得越多,她越像"她"
-- **多平台客户端**:Android App(Capacitor 8 打包)/ iOS / 浏览器
+- 💬 **文字聊天(24 小时)** — 像发微信一样和"她"聊天,她记得你的近况、喜好和你说过的每一件事
+- 📹 **视频通话(实时)** — 按住说话 → 语音识别 → AI 思考 → 克隆音色合成 → **数字人唇形同步** → 实时视频流,像真的打视频电话
+- 🧠 **记忆系统** — 你说过的事实只保存在**你自己的手机本地**(IndexedDB),聊得越多,她越像"她"
+- 📱 **多平台客户端** — Android App(Capacitor 8 打包)/ iOS / 浏览器网页版
 
 ## 效果(生产环境实测)
 
@@ -27,7 +33,8 @@
 | 语音识别(ASR) | ~440 ms |
 | AI 回复(LLM) | ~900 ms |
 | 唇形同步 | Wav2Lip modelres 256,GPU 实时生成 |
-| 链路 | 手机仅通过**一个端口**完成信令 + 视频流(HTTP-FLV) |
+| 网络架构 | 手机仅通过**一个端口**完成信令 + 视频流(HTTP-FLV) |
+| 部署形态 | 云端 GPU 弹性调度:文字聊天仅需轻量 CPU 实例(约 40 元/月),视频按需开机 |
 
 ## 系统架构
 
@@ -68,6 +75,7 @@
 4. **记忆系统的隐私设计** — 用户隐私事实只存**手机本地 IndexedDB**,服务器每轮对话只做增量事实提取(轻量模型),并采用**确定性代码合并**而非 LLM 合并(实测 LLM 合并会丢记忆、把数字人自己的话误记为用户的话)。服务器零用户数据落库
 5. **服务降级链** — LLM:charGLM-4 → GLM-4-Plus → GLM-4-Flash;TTS:MiniMax 克隆音色 → edge-tts → 设备端 TTS,任何环节失败都不中断对话
 6. **移动端工程化** — Capacitor 8 要求 JDK 21、混合内容放行、自动播放策略、权限申请时序等 Android 踩坑全链路打通,APK 直装交付
+7. **成本控制** — 按真实用量实测(如 TTS 5 小时测试仅 0.28 元),设计了 GPU 按需开关机 + CPU 常驻的弹性部署方案,单客户月度服务器成本约 75 元
 
 ## 目录结构
 
@@ -101,6 +109,15 @@ node server.js
 ```
 
 前端开发:`npm run dev`;Android 打包:`npm run build && npx cap sync android`,然后使用 Gradle 构建(需 JDK 21)。
+
+## Roadmap
+
+- [x] 文字聊天 + 记忆系统(v1)
+- [x] 实时视频通话 + 唇形同步(v2)
+- [x] Android APK 打包交付(v3)
+- [ ] 视频通话画面截图与演示视频
+- [ ] 语音通话(无画面)降级模式
+- [ ] 多数字人管理后台
 
 ## 隐私与合规
 
