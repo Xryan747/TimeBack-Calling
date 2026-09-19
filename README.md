@@ -92,23 +92,78 @@
 └── db/                    # SQLite 封装(仅运行元数据,不含用户聊天数据)
 ```
 
-## 快速开始
+## 使用教程
+
+### 1. 环境要求
+
+| 场景 | 环境 |
+|---|---|
+| 文字聊天(最低要求) | Node.js ≥ 18(建议 20 LTS)、1~2 GiB 内存的云服务器,**无需 GPU**(约 40 元/月) |
+| 视频通话(必需) | GPU 服务器:Python 3.10+、CUDA、ffmpeg。生产环境为 RTX 3090 24 GB(Wav2Lip modelres 256);小显存可降为 modelres 128 |
+| 流媒体分发 | nginx-rtmp(NMS) |
+| Android 打包 | JDK 21、Android Studio / Gradle |
+
+### 2. 接入了哪些 API、用了什么模型
+
+| 环节 | 供应商 / 接口 | 模型 | 说明 |
+|---|---|---|---|
+| 对话生成 | 智谱 `open.bigmodel.cn/api/paas/v4/chat/completions` | **charGLM-4 → GLM-4-Plus → GLM-4-Flash** | 三级自动降级;charGLM-4 拟人语气最像真人 |
+| 人设生成 | 智谱 | GLM-4-Plus | 从历史聊天记录分析出数字人性格与口癖 |
+| 语音识别(ASR) | 智谱 `/audio/transcriptions` | **GLM-ASR-2512** | 支持中文与方言,~440 ms |
+| 记忆提取 | 智谱 | GLM-4-Flash | 每轮对话后提取事实,低成本 |
+| 语音合成(TTS) | MiniMax `api.minimax.chat/v1/t2a_v2` | **speech-01-turbo + 克隆音色 voice_id** | 用亲人语音样本克隆出"她的声音" |
+| TTS 降级 | 本地 CosyVoice / edge-tts(免费) | — | MiniMax 失败时自动切换 |
+| TTS 兜底 | 设备端 `@capacitor-community/text-to-speech` | — | iOS 原生语音,离线可用 |
+| 唇形同步 | [LiveTalking](https://github.com/lipku/LiveTalking)(本机 :8010) | Wav2Lip + `/humanaudio` | 合成语音喂给数字人,实时生成口型视频 |
+| 视频推流 | nginx-rtmp(NMS) | RTMP → HTTP-FLV | 单端口低延迟分发 |
+
+### 3. 申请 API Key
+
+1. **智谱开放平台** [open.bigmodel.cn](https://open.bigmodel.cn) 注册 → 创建 API Key(LLM 与 ASR 共用一个 Key)
+2. **MiniMax** [platform.minimaxi.com](https://platform.minimaxi.com) → 声音克隆(上传亲人语音样本)→ 拿到 `voice_id`
+3. 配置环境变量:
 
 ```bash
-# 1. 安装依赖
-npm install
-
-# 2. 配置环境变量(参考 .env.example)
-cp .env.example .env   # 填入智谱 API Key 等
-
-# 3. 启动服务(文字聊天即可用)
-node server.js
-
-# 4. 视频通话需另外部署 LiveTalking + nginx-rtmp
-#    参考 https://github.com/lipku/LiveTalking
+cp .env.example .env
 ```
 
-前端开发:`npm run dev`;Android 打包:`npm run build && npx cap sync android`,然后使用 Gradle 构建(需 JDK 21)。
+```ini
+PORT=3000              # 服务端口,默认 3000
+ZHIPU_API_KEY=...      # 必需:LLM + ASR
+MINIMAX_API_KEY=...    # 可选:TTS 克隆音色
+MINIMAX_VOICE_ID=...   # 可选:克隆音色 ID(填了才会走 MiniMax)
+```
+
+4. 登录账号为前端本地校验,修改 `src/pages/LoginPage.jsx` 顶部的 `VALID_USER` / `VALID_PASS` 常量即可
+
+### 4. 部署步骤
+
+#### A. 文字聊天(CPU 服务器即可)
+
+```bash
+npm install
+cp .env.example .env     # 填入 ZHIPU_API_KEY
+node server.js           # 或 pm2 start server.js --name timeback
+```
+
+浏览器打开 `http://服务器IP:3000` → 登录 → 开始聊天。此模式不依赖 GPU,成本约 40 元/月。
+
+#### B. 视频通话(需 GPU)
+
+1. 在 GPU 机上部署 [LiveTalking](https://github.com/lipku/LiveTalking)(Python),配置数字人形象与 Wav2Lip,启动后监听 `8010`
+2. 部署 nginx-rtmp:`1935` 接收 RTMP 推流,输出 HTTP-FLV
+3. Node 服务默认从 `localhost:8010` 调用 LiveTalking —— 生产建议 Node 与 LiveTalking **同机部署**;若分开部署,需修改 `websocket/callHandler.js` 与 `services/ltAvatarService.js` 中的 `LT_URL`
+4. App 内发起视频通话 → 按住说话,即可看到数字人实时唇形同步的画面
+
+#### C. Android APK 打包
+
+```bash
+npm run build
+npx cap sync android
+cd android && ./gradlew assembleDebug   # 需 JDK 21
+```
+
+APK 输出于 `android/app/build/outputs/apk/`。前端开发模式:`npm run dev`。
 
 ## Roadmap
 
@@ -123,7 +178,7 @@ node server.js
 
 - 本仓库**不包含任何真实用户数据**:人设、头像素材、声音克隆样本、聊天记录均已从仓库移除(人设配置请使用 `personas/mom.example.json` 模板)
 - 所有 AI 服务密钥通过 `.env` 注入,严禁提交
-- 项目中的用户记忆仅存在于用户自己的设备端,服务器不持久化聊天内容
+- 用户记忆事实只保存在用户自己的设备端(IndexedDB);服务器每轮对话仅做增量事实提取 + 确定性代码合并,合并结果只用于下一轮对话上下文。聊天记录在服务端有备份(用于重新登录后恢复),不含声音克隆样本等敏感素材
 
 ## License
 
