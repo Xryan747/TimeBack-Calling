@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Timeback Calling</title>
+<style>
+  html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden}
+  #v{width:100%;height:100%;object-fit:cover;background:#000}
+  #hint{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#ddd;background:rgba(0,0,0,0.55);z-index:10;font-size:15px;text-align:center;padding:0 30px}
+  #stat{position:fixed;left:8px;top:8px;color:#4a4;font-size:11px;z-index:20;display:none;background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px}
+</style>
+</head>
+<body>
+<video id="v" autoplay playsinline muted></video>
+<div id="hint">连接数字人中…</div>
+<div id="stat"></div>
+<script src="/flv.min.js"></script>
+<script>
+(function(){
+  var v=document.getElementById('v'), hint=document.getElementById('hint'), stat=document.getElementById('stat');
+  var player=null, alive=true, muted=true, everPlayed=false, stallCount=0, retryCount=0;
+  // 安卓 App 里(MainActivity 已允许自动播放)带上 unmute=1 直接有声开播,
+  // 避免"静音→点一下开声音"的切换在安卓 WebView 上触发媒体管线重新协商
+  var autounmute = new URLSearchParams(location.search).get('unmute')==='1';
+  // 手机走系统原生 HLS 播放器:安卓 WebView 里 flv.js(MSE)和网页内录音不共存,
+  // 录音一开视频解码必死(2026-09-06 用户手机实测);原生 HLS 是手机自己的媒体管线,
+  // 与录音共存(和本地版 WebRTC 同一类原生通道)。桌面 Chrome 没这个坑,继续 flv.js 低延迟
+  var NATIVE_HLS = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  function log(s){ stat.style.display='block'; stat.textContent=s; }
+
+  // ===== 手机:原生 HLS =====
+  var hlsUrl='/live/livestream.m3u8';
+  function connectHls(){
+    if(!alive) return;
+    log('HLS 连接中… #'+retryCount);
+    v.src=hlsUrl; v.load();
+    var p=v.play(); if(p&&p.catch)p.catch(function(){});
+  }
+  v.addEventListener('playing', function(){ everPlayed=true; stallCount=0; hint.style.display='none'; log('HLS 播放中'); });
+  v.addEventListener('error', function(){
+    if(!alive) return;
+    retryCount++;
+    log('流断开,自动重连… #'+retryCount);
+    if(!everPlayed) hint.textContent='连接数字人中…';
+    setTimeout(function(){ if(alive){ v.src=''; setTimeout(connectHls, 800); } }, 2000);
+  });
+  // 看门狗:播着播着卡住(网络抖动/网关断流)就重拉一次
+  setInterval(function(){
+    if(!alive || !everPlayed || NATIVE_HLS===false) return;
+    if(!v.paused && v.readyState<3){ stallCount++; if(stallCount>=4){ log('播放卡住,重拉流'); v.src=''; setTimeout(connectHls, 500); stallCount=0; } }
+    else stallCount=0;
+  }, 2000);
+
+  // ===== 桌面:flv.js =====
+  function connectFlv(){
+    if(!alive) return;
+    if(!window.flvjs || !flvjs.isSupported()){ hint.textContent='当前浏览器不支持视频流播放'; return; }
+    try{
+      player=flvjs.createPlayer({type:'flv',isLive:true,url:'/live/livestream.flv'}, {
+        enableStashBuffer:false, autoCleanupSourceBuffer:true, autoCleanupMaxBackwardDuration:8, liveBufferLatencyChasing:true
+      });
+      muted=!autounmute; v.muted=muted;
+      player.attachMediaElement(v); player.load(); player.play();
+      // 万一自动有声播放被系统拦了,退回静音 + 点一下开声音,保证视频还能看
+      if(autounmute){
+        var p=v.play();
+        if(p&&p.catch)p.catch(function(){ v.muted=true; muted=true; hint.textContent='点一下画面开启声音'; hint.style.display='flex'; });
+      }
+      player.on(flvjs.Events.ERROR, function(e,err,info){
+        log('流错误,自动重连… ('+e+')');
+        try{player.destroy();}catch(_){}
+        player=null;
+        if(!everPlayed) hint.textContent='连接数字人中…';
+        setTimeout(connectFlv, 2500);
+      });
+      player.on(flvjs.Events.STATISTICS_INFO, function(){ everPlayed=true; hint.style.display='none'; });
+      log('播放中');
+    }catch(e){ log('初始化失败,重试'); setTimeout(connectFlv, 2500); }
+  }
+
+  function unmute(){
+    if(muted && v){ muted=false; v.muted=false; var p=v.play(); if(p&&p.catch)p.catch(function(){}); hint.style.display='none'; }
+  }
+  // 父页面(CallPage)第一次触摸时通知取消静音 —— 手机浏览器自动播放限制
+  window.addEventListener('message', function(e){ if(e.data && e.data.type==='lt_unmute') unmute(); });
+  // 直接点画面也取消静音
+  document.body.addEventListener('pointerdown', unmute, {once:true});
+  window.addEventListener('beforeunload', function(){ alive=false; try{player&&player.destroy();}catch(_){} });
+
+  log('UA: '+navigator.userAgent.slice(0, 90));
+  if(NATIVE_HLS){ muted=!autounmute; v.muted=muted; connectHls(); }
+  else connectFlv();
+})();
+</script>
+</body>
+</html>

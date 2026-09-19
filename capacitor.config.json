@@ -1,0 +1,13 @@
+{
+  "appId": "com.digitalhuman.call",
+  "appName": "数字人通话",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#EDEDED"
+  }
+}

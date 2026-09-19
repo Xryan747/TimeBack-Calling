@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">数字人通话</string>
+    <string name="title_activity_main">数字人通话</string>
+    <string name="package_name">com.digitalhuman.call</string>
+    <string name="custom_url_scheme">com.digitalhuman.call</string>
+</resources>

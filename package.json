@@ -1,0 +1,39 @@
+{
+  "name": "digital-human-call",
+  "version": "1.0.0",
+  "description": "Real-time video call with AI digital humans",
+  "main": "server.js",
+  "scripts": {
+    "dev": "concurrently \"node server.js\" \"vite\"",
+    "build": "vite build",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@capacitor-community/text-to-speech": "^8.0.1",
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "edge-tts": "^1.0.1",
+    "express": "^4.21.2",
+    "form-data": "^4.0.6",
+    "https-proxy-agent": "^9.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
+    "sql.js": "^1.14.1",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0",
+    "@capacitor/app": "^8.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "vite": "^6.0.0"
+  }
+}

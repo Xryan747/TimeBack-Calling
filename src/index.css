@@ -1,0 +1,265 @@
+/* === Reset & Base === */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --color-bg: #0f0f0f;
+  --color-surface: #1a1a1a;
+  --color-surface-hover: #252525;
+  --color-text: #f5f5f5;
+  --color-text-secondary: #a0a0a0;
+  --color-primary: #07C160;
+  --color-danger: #e74c3c;
+  --color-danger-hover: #c0392b;
+  --color-border: #2a2a2a;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+  --max-width: 480px;
+  /* iOS safe area */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* Minimum top padding to clear status bar (non-notch iPhones) */
+  --status-bar-h: max(var(--safe-top), 20px);
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* iPhone Safari:100% 高度在底部工具条展开时到不了底(下面漏一条背景色)。
+   dvh = 动态视口高度,Safari 底栏收起/展开实时跟随;svh 取最小视口,底栏收起后
+   页面比屏幕矮,底部会漏一条 body 背景色(空白行)——必须用 dvh */
+@supports (height: 100dvh) {
+  html, body, #root { height: 100dvh; }
+}
+
+body {
+  /* WeChat font stack — PingFang/YaHei for Chinese, system sans for Latin */
+  font-family: -apple-system-font, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif;
+  /* Light base — matches the WeChat-style pages; dark pages set their own background inline */
+  background: #EDEDED;
+  color: #191919;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent; /* kill the gray flash on taps (mobile) */
+  overscroll-behavior: none;                 /* no rubber-band bounce of the app frame */
+  -webkit-user-select: none;
+  user-select: none;                         /* app feel — no accidental text selection */
+}
+
+/* Inputs and chat text stay selectable */
+input, textarea, .selectable, .msg-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Buttons don't inherit fonts by default — force WeChat font everywhere */
+button, input, textarea, select {
+  font-family: inherit;
+}
+
+.app {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #EDEDED;
+}
+
+/* Phone frame on desktop */
+.app > * {
+  width: 100%;
+  height: 100%;
+  max-width: var(--max-width);
+  background: #EDEDED;
+  position: relative;
+  overflow: hidden;
+}
+
+/* iOS safe area padding */
+.pt-safe { padding-top: calc(var(--status-bar-h) + 12px); }
+.pb-safe { padding-bottom: calc(var(--safe-bottom) + 16px); }
+.pl-safe { padding-left: calc(var(--safe-left) + 16px); }
+.pr-safe { padding-right: calc(var(--safe-right) + 16px); }
+
+/* === Buttons === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+.btn-ghost:hover { background: var(--color-surface-hover); }
+
+/* === Cards === */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* === Inputs === */
+input[type="text"],
+textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+/* === File Input === */
+.file-input-area {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.file-input-area:hover,
+.file-input-area.active {
+  border-color: var(--color-primary);
+  background: rgba(7, 193, 96, 0.05);
+}
+.file-input-area.has-file {
+  border-style: solid;
+  border-color: var(--color-primary);
+}
+
+/* === Spinner === */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Skeleton === */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-hover) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* === Toast === */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  z-index: 1000;
+  box-shadow: var(--shadow);
+  animation: toastIn 0.3s ease;
+}
+
+.toast.error {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* === Photo animations === */
+@keyframes photoPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.015); }
+}
+@keyframes photoBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.008); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes ringPulse {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+/* === Chat typing dots (WeChat) === */
+@keyframes chatBlink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+.chat-typing-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #9B9B9B;
+  display: inline-block; margin: 0 2px; animation: chatBlink 1.2s infinite;
+}
+.chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }

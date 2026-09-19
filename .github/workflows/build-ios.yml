@@ -1,0 +1,80 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npx vite build
+
+      - name: Install Capacitor iOS
+        run: npm install @capacitor/ios
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Build app
+        run: |
+          cd ios/App
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath ../DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            build 2>&1 | tail -5
+
+      - name: Package IPA
+        run: |
+          cd ios/App
+          APP=$(find ../DerivedData -name "App.app" -path "*/Release-iphoneos/*" | head -1)
+          echo "App: $APP"
+          if [ -z "$APP" ]; then echo "FAIL: no .app"; exit 1; fi
+
+          # Check .app structure
+          echo "=== App bundle ==="
+          ls "$APP" | head -20
+          echo "=== Info.plist ==="
+          ls "$APP/Info.plist" 2>/dev/null && echo "Info.plist OK" || echo "NO Info.plist!"
+
+          # Create IPA using ditto (macOS native, preserves .app correctly)
+          mkdir Payload
+          cp -R "$APP" Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload App.ipa
+          rm -rf Payload
+
+          # Verify IPA
+          echo "=== IPA ==="
+          ls -lh App.ipa
+          echo "=== IPA contents ==="
+          unzip -l App.ipa | head -15
+
+          # Move to repo root for easier download
+          mv App.ipa ../../
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: DigitalHuman
+          path: App.ipa
